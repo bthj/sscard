@@ -1,2 +1,0 @@
-const network = {}
-export { network }

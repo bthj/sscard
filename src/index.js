@@ -1,70 +1,62 @@
-import process from 'socket:process'
-import { network } from './lib/network.js'
-import { initializeViews } from './lib/views.js'
-// import { db } from './lib/data.js'
+import { render } from 'react-dom'
+import React, { useState } from 'react'
+import { useSprings, animated, interpolate } from 'react-spring'
+import { useGesture } from 'react-use-gesture'
+import './styles.css'
 
-import './views/profile/index.js'
-import './views/messages/index.js'
-import './views/sidebar/index.js'
+// List of card images
+const cards = [
+  'https://upload.wikimedia.org/wikipedia/commons/f/f5/RWS_Tarot_08_Strength.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/5/53/RWS_Tarot_16_Tower.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/9/9b/RWS_Tarot_07_Chariot.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/3/3a/TheLovers.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/8/88/RWS_Tarot_02_High_Priestess.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/d/de/RWS_Tarot_01_Magician.jpg'
+]
 
-let isMobile = false
+// Helpers to curate spring data
+const to = (i) => ({ x: 0, y: i * -4, scale: 1, rot: -10 + Math.random() * 20, delay: i * 100 })
+const from = (i) => ({ x: 0, rot: 0, scale: 1.5, y: -1000 })
+// Interpolates rotation and scale into a css transform
+const trans = (r, s) => `perspective(1500px) rotateX(30deg) rotateY(${r / 10}deg) rotateZ(${r}deg) scale(${s})`
 
-function addPlaceholderData () {
-  const messagesContainer = document.querySelector('#message-buffer .buffer-content')
+function Deck() {
+  const [gone] = useState(() => new Set()) // Flags all the cards that are flicked out
+  const [props, set] = useSprings(cards.length, (i) => ({ ...to(i), from: from(i) })) // Create a bunch of springs using the helpers above
 
-  for (let i = 1; i <= 256; i++) {
-    const message = document.createElement('div')
-    message.innerText = `Message ${i}`
-    message.style.height = `${Math.random() * 100 + 20}px`
-    messagesContainer.appendChild(message)
+  // Callback function for handling swipe events
+  const handleSwipe = (direction, index) => {
+    console.log(`Card ${index} swiped ${direction}`)
+    // Perform actions based on the swipe direction
+    // For example, you could make an API call here to save data
   }
-}
 
-//
-// A long scroll event can block the keyboard show event
-// The way to ensure this doesn't happen is to just temporarily
-// assign hidden to the overflow that is causing the scroll.
-//
-function addScrollCancel () {
-  if (!isMobile) return
-
-  const elBuffer = document.getElementById('message-buffer')
-  const elInput = document.getElementById('input')
-
-  elInput.addEventListener('click', () => {
-    elBuffer.style.overflowY = 'hidden'
-
-    setTimeout(() => {
-      elBuffer.style.overflowY = 'auto'
-    }, 128)
+  // Create a gesture, interested in down-state, delta (current-pos - click-pos), direction, and velocity
+  const bind = useGesture(({ args: [index], down, delta: [xDelta], distance, direction: [xDir], velocity }) => {
+    const trigger = velocity > 0.2 // If you flick hard enough it should trigger the card to fly out
+    const dir = xDir < 0 ? -1 : 1 // Direction should either point left or right
+    if (!down && trigger) {
+      gone.add(index) // If button/finger's up and trigger velocity is reached, flag the card ready to fly out
+      handleSwipe(dir === -1 ? 'left' : 'right', index) // Call the swipe handler
+    }
+    set((i) => {
+      if (index !== i) return // Only change spring-data for the current spring
+      const isGone = gone.has(index)
+      const x = isGone ? (200 + window.innerWidth) * dir : down ? xDelta : 0 // Fly out left or right, otherwise back to zero
+      const rot = xDelta / 100 + (isGone ? dir * 10 * velocity : 0) // Tilt based on flick strength
+      const scale = down ? 1.1 : 1 // Active cards lift up a bit
+      return { x, rot, scale, delay: undefined, config: { friction: 50, tension: down ? 800 : isGone ? 200 : 500 } }
+    })
+    if (!down && gone.size === cards.length) setTimeout(() => gone.clear() || set((i) => to(i)), 600)
   })
+
+  // Map animated values to the view
+  return props.map(({ x, y, rot, scale }, i) => (
+    <animated.div key={i} style={{ transform: interpolate([x, y], (x, y) => `translate3d(${x}px,${y}px,0)`) }}>
+      {/* Bind the gesture to the card and inject its index so we know which is which */}
+      <animated.div {...bind(i)} style={{ transform: interpolate([rot, scale], trans), backgroundImage: `url(${cards[i]})` }} />
+    </animated.div>
+  ))
 }
 
-//
-// We want to know if the keyboard is displayed, the layout should
-// change slightly when the input moves away from the bottom bevel.
-//
-window.addEventListener('keyboard', ({ detail }) => {
-  if (detail.value.event === 'will-show') {
-    document.body.setAttribute('keyboard', 'true')
-  }
-
-  if (detail.value.event === 'will-hide') {
-    document.body.setAttribute('keyboard', 'false')
-  }
-})
-
-document.addEventListener('DOMContentLoaded', () => {
-  document.body.setAttribute('platform', process.platform)
-
-  if (['android', 'ios'].includes(process.platform)) {
-    isMobile = true
-    document.body.setAttribute('hardware', 'mobile')
-  } else {
-    document.body.setAttribute('hardware', 'desktop')
-  }
-
-  addPlaceholderData()
-  addScrollCancel(isMobile)
-  initializeViews()
-})
+render(<Deck />, document.getElementById('root'))
