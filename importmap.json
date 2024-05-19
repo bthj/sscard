@@ -1,6 +1,6 @@
 {
   "imports": {
-    "@socketsupply/indexed": "npm:@socketsupply/indexed",
+    "lodash-es": "npm:lodash-es",
     "react": "npm:react",
     "react-dom": "npm:react-dom",
     "react-scripts": "npm:react-scripts",
