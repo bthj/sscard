@@ -1,6 +1,10 @@
 {
   "imports": {
     "@socketsupply/indexed": "npm:@socketsupply/indexed",
-    
+    "react": "npm:react",
+    "react-dom": "npm:react-dom",
+    "react-scripts": "npm:react-scripts",
+    "react-spring": "npm:react-spring",
+    "react-use-gesture": "npm:react-use-gesture"
   }
 }
