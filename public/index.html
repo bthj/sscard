@@ -3,11 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        connect-src socket: npm: https: http: blob: ipc: wss: ws: ws://localhost:*;
+         script-src socket: npm: node: https: http: blob: http://localhost:* 'unsafe-eval' 'unsafe-inline';
+         worker-src socket: https: http: blob: 'unsafe-eval' 'unsafe-inline';
+          frame-src socket: https: http: blob: http://localhost:*;
+            img-src socket: https: http: blob: data: http://localhost:*;
+          child-src socket: https: http: blob:;
+         object-src 'none';
+      "
+    >
+    <script src="index.js" type="module"></script>
     <title>Card Deck</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div id="root"></div>
-    <script src="index.js" type="module"></script>
+    
   </body>
 </html>
